@@ -1,0 +1,2 @@
+add-auto-load-safe-path /home/michael/devel/pluto/plutosdr-fw/buildroot/output/host/arm-buildroot-linux-gnueabihf/sysroot
+set sysroot /home/michael/devel/pluto/plutosdr-fw/buildroot/output/host/arm-buildroot-linux-gnueabihf/sysroot
