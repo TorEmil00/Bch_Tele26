@@ -209,8 +209,7 @@ int uart_bridge_write_rf_payload(const uint8_t payload[UART_RF_PAYLOAD_LEN])
         written_total += (size_t)w;
     }
 
-    // FJERNET: 
-    tcdrain(uart_fd); //<--- Synderen som låste hele programmet er nå borte!
+    // FJERNET: tcdrain(uart_fd); //<--- Synderen som låste hele programmet er nå borte!
     
     return (int)written_total;
 }

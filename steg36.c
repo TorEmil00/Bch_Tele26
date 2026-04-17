@@ -98,6 +98,7 @@ void apply_cmd(uint8_t id, uint8_t val) {
 #define PAYLOAD_LEN 64
 #define SAMPLES_PER_SYMBOL_TX 50  
 #define SAMPLES_PER_SYMBOL_RX 2    
+
 #define DECIMATION_FACTOR 25       
 #define TX_BUFFER_SAMPLES 65536 
 #define RX_BUFFER_SAMPLES 10000  
