@@ -22,8 +22,8 @@ typedef struct {
 } cpu_stat_t;
 
 volatile float sys_alpha = 0.60f;
-volatile long long sys_rx_gain = 40;  // Denne oppdateres nå live av AGC!
-volatile long long sys_tx_atten = 10;
+volatile long long sys_rx_gain = 40;  // Denne oppdateres live av AGC!
+volatile long long sys_tx_atten = 15;
 volatile int sys_tx_ampl = 15000;
 
 volatile float sys_c0_load = 0.0f;
@@ -106,10 +106,9 @@ void apply_cmd(uint8_t id, uint8_t val) {
         sys_alpha = val / 255.0f;
         if (sys_alpha < 0.05f) sys_alpha = 0.05f;
     } else if (id == 2) {
-        // MERK: Siden raketten nå bruker AGC, vil manuell RX-gain her sannsynligvis 
-        // overskrives av AGC-motoren umiddelbart!
+        // FIKS 3: Fjerner skriving til maskinvaren for å ikke slåss med AGC.
+        // Vi lar variabelen kun være en "dummy" så systemet ikke krasjer.
         sys_rx_gain = val > 75 ? 75 : val;
-        if (rx_chan_global) iio_channel_attr_write_longlong(rx_chan_global, "hardwaregain", sys_rx_gain);
     } else if (id == 3) {
         sys_tx_atten = val > 80 ? 80 : val;
         if (tx_chan_global) iio_channel_attr_write_longlong(tx_chan_global, "hardwaregain", sys_tx_atten);
@@ -128,10 +127,9 @@ void apply_cmd(uint8_t id, uint8_t val) {
 
 #define TELEMETRY_SYNC 0x1ACFFC1D
 #define COMMAND_SYNC   0x55AA55AA
-#define UART_SYNC      0xA55A3CC3
-// NYTT: Inverterte Sync-ord for å fange opp 180 graders fasefeil!
 #define COMMAND_SYNC_INV 0xAA55AA55
-#define UART_SYNC_INV    0x5AA5C33C
+#define UART_SYNC      0xA55A3CC3
+#define UART_SYNC_INV  0x5AA5C33C
 
 static int rf_uart_out(uint8_t *p) {
     whiten_payload(p, PAYLOAD_LEN);
@@ -151,7 +149,6 @@ void *telemetry_thread_func(void *arg) {
         
         if (rx_chan_global && iio_channel_attr_read_longlong(rx_chan_global, "rssi", &r_val) == 0) sys_rssi = r_val / 100.0f;
         
-        // NYTT: Leser ut gjeldende Gain fra maskinvaren (viktig når AGC styrer det!)
         if (rx_chan_global && iio_channel_attr_read_longlong(rx_chan_global, "hardwaregain", &g_val) == 0) sys_rx_gain = g_val;
         
         sleep(1);
@@ -182,7 +179,6 @@ void *tx_thread_func(void *arg) {
                 } else {
                     current_sync = TELEMETRY_SYNC;
                     float avg_cpu = (sys_c0_load + sys_c1_load) / 2.0f;
-                    // NYTT: Sender med Rakettens RX Gain (G) og TX Atten (A)
                     snprintf((char *)payload, PAYLOAD_LEN,
                              "L:%d|V:%d|K:%d|UA:%d|R:%.1f|C:%02.0f|T:%.1f|G:%lld|A:%lld",
                              last_cmd_id, last_cmd_val, cmd_ack_count, uart_ack_count, 
@@ -224,7 +220,7 @@ void *rx_thread_func(void *arg) {
     unsigned int ns = 0, bit = 0; uint32_t sr = 0, cmd = 0;
     uint8_t up[PAYLOAD_LEN]; char ts[20];
     int st = 0, nbit = 0;
-    bool rx_inverted = false; // NYTT: Flagg for å vite om radioen er opp-ned
+    bool rx_inverted = false; 
 
     memset(up, 0, sizeof(up));
     while (keep_running) {
@@ -244,11 +240,10 @@ void *rx_thread_func(void *arg) {
                 nco_crcf_pll_step(pll, modemcf_get_demodulator_phase_error(dem));
                 nco_crcf_step(pll);
 
-                // MAGIEN: Hvis Costas-loop låste 180 grader feil, snu biten automatisk!
                 uint8_t actual_bit = rx_inverted ? ((~bit) & 1) : (bit & 1);
 
                 if (st == 0) {
-                    sr = (sr << 1) | (bit & 1); // Søker alltid med rå-bits
+                    sr = (sr << 1) | (bit & 1); 
                     if (sr == COMMAND_SYNC) {
                         st = 1; nbit = 0; cmd = 0; rx_inverted = false;
                     } else if (sr == COMMAND_SYNC_INV) {
@@ -322,8 +317,6 @@ int main() {
     iio_channel_attr_write_longlong(rx_lo, "frequency", 433000000);
     iio_channel_attr_write_longlong(rx_chan, "rf_bandwidth", 2000000);
     iio_channel_attr_write_longlong(rx_chan, "sampling_frequency", 2500000);
-    
-    // NYTT: AGC AKTIVERT! Raketten fikser volumet sitt automatisk.
     iio_channel_attr_write(rx_chan, "gain_control_mode", "slow_attack"); 
 
     rx_dev = iio_context_find_device(ctx, "cf-ad9361-lpc");
@@ -331,7 +324,8 @@ int main() {
     rx0_q = iio_device_find_channel(rx_dev, "voltage1", false);
     iio_channel_enable(rx0_i); iio_channel_enable(rx0_q);
     
-    if (uart_bridge_init("/dev/ttyPS1", 115200) != 0) { fprintf(stderr, "Kunne ikke åpne UART\n"); }
+    // Pass på at denne står på ttyPS1 hvis pinnen din henger der! (Noen ganger er det ttyPS0)
+    if (uart_bridge_init("/dev/ttyPS1", 115200) != 0) { fprintf(stderr, "Kunne ikke åpne UART\\n"); }
 
     pthread_t tx_thread, rx_thread, telemetry_thread; cpu_set_t cpuset_tx, cpuset_rx;
     CPU_ZERO(&cpuset_tx); CPU_SET(0, &cpuset_tx);
@@ -342,7 +336,7 @@ int main() {
 
     pthread_create(&telemetry_thread, NULL, telemetry_thread_func, NULL);
     
-    printf("🚀 Rakett-OS Kjører! (AGC & Auto-Invert Phase Correction ON)\n"); fflush(stdout);
+    printf("🚀 Rakett-OS Kjører! (Sikker CPU, AGC & UART Aktivert)\n"); fflush(stdout);
     pthread_join(tx_thread, NULL); pthread_join(rx_thread, NULL); pthread_join(telemetry_thread, NULL);
     uart_bridge_close(); iio_context_destroy(ctx); return 0;
 }
