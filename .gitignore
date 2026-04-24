@@ -1,3 +1,70 @@
 *.tar.gz
 *.tar.xz
 rakett_tx
+
+# ----- Build-artefakter (C/C++) -----
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+*.d
+build/
+Build/
+Debug/
+Release/
+
+# ----- STM32CubeIDE -----
+.metadata/
+.settings/
+.cproject
+.project
+*.launch
+RemoteSystemsTempFiles/
+Bch_Tele26_RIU/Debug/
+Bch_Tele26_RIU/Release/
+
+# ----- Python (bakke-gui, tools) -----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ----- GNU Radio -----
+# Generert Python fra .grc — behold .grc, ignorer generert kode hvis dere
+# regenererer ved bygg. Kommentér ut hvis dere foretrekker å committe begge.
+gnuradio/flowgraphs/*.py
+gnuradio/flowgraphs/*.pyc
+
+# ----- Editor / OS -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----- Logger og målinger -----
+logs/
+*.log
+*.csv.bak
+captures/
+*.iq
+*.cfile
+
+# ----- Sensitivt -----
+*.pem
+*.key
+secrets.env
+.env
