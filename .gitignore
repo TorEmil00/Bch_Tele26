@@ -1,12 +1,24 @@
-*.tar.gz
+# ----- Toolchain og sysroot (skal ikke i Git) -----
+gcc-linaro-7.3.1-2018.05-x86_64_arm-linux-gnueabihf/
+gcc-linaro-*/
+staging/
+
+# ----- Nedlastede arkiver (toolchain, sysroot) -----
 *.tar.xz
-rakett_tx
+*.tar.gz
+*.zip
+
+# ----- Tredjepartsbiblioteker (hentes via package manager / SDK) -----
+pluto_libs/
+liquid/
+liquid-dsp/
 
 # ----- Build-artefakter (C/C++) -----
 *.o
 *.obj
 *.a
 *.so
+*.so.*
 *.dylib
 *.elf
 *.bin
@@ -19,6 +31,10 @@ Build/
 Debug/
 Release/
 
+# Kompilerte hjelpe-programmer (men IKKE radio-enhet/dist/rakett_os som skal i Git)
+framing
+test_hardware
+
 # ----- STM32CubeIDE -----
 .metadata/
 .settings/
@@ -26,10 +42,10 @@ Release/
 .project
 *.launch
 RemoteSystemsTempFiles/
-Bch_Tele26_RIU/Debug/
-Bch_Tele26_RIU/Release/
+**/Debug/
+**/Release/
 
-# ----- Python (bakke-gui, tools) -----
+# ----- Python -----
 __pycache__/
 *.py[cod]
 *$py.class
@@ -40,9 +56,7 @@ env/
 .pytest_cache/
 .mypy_cache/
 
-# ----- GNU Radio -----
-# Generert Python fra .grc — behold .grc, ignorer generert kode hvis dere
-# regenererer ved bygg. Kommentér ut hvis dere foretrekker å committe begge.
+# ----- GNU Radio (behold .grc, ignorer generert .py) -----
 gnuradio/flowgraphs/*.py
 gnuradio/flowgraphs/*.pyc
 
@@ -55,10 +69,9 @@ gnuradio/flowgraphs/*.pyc
 .DS_Store
 Thumbs.db
 
-# ----- Logger og målinger -----
+# ----- Logger og maalinger -----
 logs/
 *.log
-*.csv.bak
 captures/
 *.iq
 *.cfile
